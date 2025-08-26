@@ -1,5 +1,5 @@
 import httpx
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 import logging
 import os
 import base64
@@ -12,7 +12,28 @@ from pydantic import BaseModel, Field
 logging.basicConfig(level=logging.INFO)
 
 # Initialize FastMCP server
-mcp = FastMCP("freshdesk-mcp")
+mcp = FastMCP("freshdesk-mcp", instructions="""
+I am a Freshdesk service that helps manage tickets, contacts, and other support resources.
+
+Common scenarios I can help with:
+- Creating and updating tickets with appropriate priorities and statuses
+- Managing ticket conversations through replies and notes 
+- Searching and retrieving ticket information
+- Handling contacts and contact fields
+- Managing agents and groups
+- Working with solution articles and categories
+- Handling canned responses
+
+For ticket creation:
+- Status values: 2 (Open), 3 (Pending), 4 (Resolved), 5 (Closed)
+- Priority values: 1 (Low), 2 (Medium), 3 (High), 4 (Urgent)
+- Source values: 1 (Email), 2 (Portal), 3 (Phone), 7 (Chat), 9 (Feedback), 10 (Outbound email)
+
+When creating or updating resources, I'll validate the input and provide helpful error messages if something is wrong.
+I aim to handle errors gracefully and provide clear feedback about what went wrong.
+
+Let me know how I can help manage your Freshdesk resources!
+""")
 
 FRESHDESK_API_KEY = os.getenv("FRESHDESK_API_KEY")
 FRESHDESK_DOMAIN = os.getenv("FRESHDESK_DOMAIN")
@@ -161,6 +182,24 @@ class CannedResponseCreate(BaseModel):
         description="Groups for which the canned response is visible. Required if visibility=2"
     )
 
+# @mcp.tool()
+# async def translate_ticket_status(status: int) -> str:
+#     """Translate ticket status code to human-readable string."""
+#     try:
+#         ticket_status = TicketStatus(status)
+#         return ticket_status.name
+#     except ValueError:
+#         return f"Invalid status code: {status}. Valid status codes are: {[s.value for s in TicketStatus]}"
+#
+# @mcp.tool()
+# async def translate_ticket_priority(priority: int) -> str:
+#     """Translate ticket priority code to human-readable string."""
+#     try:
+#         ticket_priority = TicketPriority(priority)
+#         return ticket_priority.name
+#     except ValueError:
+#         return f"Invalid priority value: {priority}. Valid status codes are: {[s.value for s in TicketPriority]}"
+
 @mcp.tool()
 async def get_ticket_fields() -> Dict[str, Any]:
     """Get ticket fields from Freshdesk."""
@@ -220,6 +259,11 @@ async def get_tickets(page: Optional[int] = 1, per_page: Optional[int] = 30) -> 
             return {"error": f"Failed to fetch tickets: {str(e)}"}
         except Exception as e:
             return {"error": f"An unexpected error occurred: {str(e)}"}
+        # finally:
+        #     logging.error(f"url: {url}")
+        #     logging.error(f"headers: {headers}")
+        #     logging.error(f"params: {params}")
+        #     logging.error(f"Error: {str(response)}")
 
 @mcp.tool()
 async def create_ticket(
@@ -1162,7 +1206,7 @@ async def find_company_by_name(name: str) -> Dict[str, Any]:
             return {"error": f"An unexpected error occurred: {str(e)}"}
 
 @mcp.tool()
-async def list_company_fields() -> List[Dict[str, Any]]:
+async def list_company_fields() -> List[Dict[str, Any]] | Dict[str, Any]:
     """List all company fields in Freshdesk."""
     url = f"https://{FRESHDESK_DOMAIN}/api/v2/company_fields"
     headers = {
@@ -1245,7 +1289,9 @@ async def delete_ticket_summary(ticket_id: int) -> Dict[str, Any]:
 
 def main():
     logging.info("Starting Freshdesk MCP server")
+    logging.info(FRESHDESK_DOMAIN)
     mcp.run(transport='stdio')
+    # mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
 
 if __name__ == "__main__":
     main()

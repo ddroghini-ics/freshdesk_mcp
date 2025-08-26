@@ -208,6 +208,11 @@ For testing purposes, you can start the server manually:
 ```bash
 uvx freshdesk-mcp --env FRESHDESK_API_KEY=<your_api_key> --env FRESHDESK_DOMAIN=<your_domain>
 ```
+For running with openwebui:
+
+```bash
+FRESHDESK_API_KEY=<your_api_key> FRESHDESK_DOMAIN=icstechnologies.freshdesk.com uvx mcpo --port 8032 -- uv run src/freshdesk_mcp/server.py
+```
 
 ## Troubleshooting
 
